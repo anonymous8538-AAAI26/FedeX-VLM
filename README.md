@@ -11,10 +11,24 @@ This is an implementation for 'FedeX-VLM: Towards Knowledge Harmonization in Het
 <img width="850" height="400" alt="image" src="https://github.com/user-attachments/assets/9c7e6f1c-a8b2-43bd-9d34-dc9a95c39182" />
 
 
-## Ready for data
-Please download the VQA v1 and VQA v2 datasets manually from the official VQA website and place them in the appropriate directory.
-The dataset should be located in the same directory as main.py.
-The structure of the dataset is as follows:
+## Datasets
+The Datasets/ directory contains our knowledge-level heterogeneous splits of the VQA v1 and VQA v2 datasets, which are used in our experiments.
+
+Details of each dataset split are summarized in the table below:
+
+<img width="600" height="250" alt="image" src="https://github.com/user-attachments/assets/403c2a5b-29ad-4e11-b67e-76fdf864956d" />
+
+<img width="600" height="250" alt="image" src="https://github.com/user-attachments/assets/ae7603cb-23ad-4a7c-bf99-a99c18a6578d" />
+
+## About the Heterogeneous Split
+We define our dataset as:
+
+D = {(q_img, a) | q_img ∈ Q_img} where Q_img represents the full set of all image-based questions,
+and a denotes the corresponding set of possible answers for each question q_img.
+
+From the full question set Q_img, we extract a subset of unique questions, denoted as {q_img,i} where i ∈ [1, N], where each q_img,i represents a unique question i associated with an image.
+
+To create answer space heterogeneity, we first sort all unique question {q_img,i }where i ∈ [1, N] in the ascending order based on the number of possible answers (i.e., small to large).
 
 
 ## Pre-trained model preperation
