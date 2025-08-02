@@ -20,6 +20,37 @@ Details of each dataset split are summarized in the table below:
 
 <img width="600" height="250" alt="image" src="https://github.com/user-attachments/assets/ae7603cb-23ad-4a7c-bf99-a99c18a6578d" />
 
+The structure of the dataset is as follows:
+
+```
+Datasets/
+├── VQA_v1/
+│   ├── 2clients/
+│   │   ├── X_client1.csv
+│   │   ├── y_client1.csv
+│   │   ├── X_client2.csv
+│   │   └── y_client2.csv
+│   ├── 3clients/
+│   │   ├── X_client1.csv
+│   │   ├── y_client1.csv
+│   │   ├── X_client2.csv
+│   │   ├── y_client2.csv
+│   │   ├── X_client3.csv
+│   │   └── y_client3.csv
+│   └── 4clients/
+│       ├── ...
+├── VQA_v2/
+│   ├── 2clients/
+│   │   ├── X_client1.csv
+│   │   ├── y_client1.csv
+│   │   ├── X_client2.csv
+│   │   └── y_client2.csv
+│   ├── 3clients/
+│   │   ├── ...
+│   └── 4clients/
+│       ├── ...
+```
+
 ## About the Heterogeneous Split
 We define our dataset as:
 
