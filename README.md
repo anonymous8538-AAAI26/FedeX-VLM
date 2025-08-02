@@ -8,8 +8,18 @@ This is an implementation for 'FedeX-VLM: Towards Knowledge Harmonization in Het
 
 ---
 ## Approach
+<img width="850" height="400" alt="image" src="https://github.com/user-attachments/assets/9c7e6f1c-a8b2-43bd-9d34-dc9a95c39182" />
 
 
----
 ## Ready for data
 Please download the VQA v1 and VQA v2 datasets manually from the official VQA website and place them in the appropriate directory.
+
+
+## Pre-trained model preperation
+
+| Pre-trained Backbone | Link | 
+| --- | --- | 
+|  ViT-B | 행1 열2 | 
+| Swin-B  | 행2 열2 | 
+|  BERT | 행3 열2 | 
+|  T5 | 행3 열2 | 
