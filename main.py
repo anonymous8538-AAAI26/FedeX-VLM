@@ -33,11 +33,11 @@ with open('config.yaml', 'r') as f:
 learning_rate = config['learning_rate']
 epsilon = config['epsilon']
 batch_size = config['batch_size']
+round_num = config['round_num']
 alpha = config['alpha']
 dataset_type = config['dataset']
 num_clients=config['num_clients']
 normalize=config['normalize']
-round_num=config['round_num']
 
 device = torch.device('cuda:7' if torch.cuda.is_available() else 'cpu')
 
@@ -56,9 +56,6 @@ num_epochs_per_round = 1
 
 start_epoch=0
 
-dir_location = '../train2014'
-image_dir_val = '../val2014'
-
 Weighted =2
 soft_max=0
 
@@ -68,21 +65,19 @@ else:
     datasplit_type='all'
 
 
-csv_folder=f'final_DATASET/{dataset_type}/'
+csv_folder=f'DATASETs/{dataset_type}/'
 
 if soft_max==1:
     soft_max_title='soft_max'
-else:
-    soft_max_title=''
 
-epoch_num=50
+
 
 if Weighted==0:
-    save_dir ='fedavg'+dataset_type+"FED"+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)
+    save_dir =f'fedavg{dataset_type}FED{datasplit_type}{num_clients}_{model_method}epcoh_{round_num}'
 elif Weighted==1:
-    save_dir ="Weighted"+dataset_type+"FED"+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
+    save_dir =f"Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}"
 elif Weighted==2:
-    save_dir =f"{normalize}_alpha{alpha}_Weighted"+dataset_type+"FED"+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
+    save_dir =f"{normalize}_alpha{alpha}_Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}{soft_max_title}"
     
       
     
