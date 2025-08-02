@@ -21,11 +21,12 @@ import random
 from torch.optim import Adam
 from transformers import ViTModel, ViTFeatureExtractor
 import torch.nn.functional as F
+import statistics
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-device = torch.device('cuda:5' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:7' if torch.cuda.is_available() else 'cpu')
 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -35,23 +36,23 @@ torch.cuda.manual_seed_all(42)
 random.seed(42)
 
 model_method='vit_bert_all_concat_bert_transformer'
-num_clients=15
-
-if num_clients==15:
-  batch_size=16
-else:
-  batch_size=32
-  
+num_clients=5
+alpha=0.7
+normalize='z_score'
 train_data_name='Ulen_client' # client_index
+
+validation_accuracy_must_measure=0#val test or not
+
+# Example usage
 num_epochs_per_round = 1
 round_num = 50
+start_epoch=0
 
 dir_location = '../train2014'
 image_dir_val = '../val2014'
-dataset_type='VQA_v1' #VQA_v1_random  /  VQA_v2_random   / VQA_v1 / VQA_v2 
-Weighted =1
-soft_max=1
-start_epoch=0 
+dataset_type='VQA_v2'#VQA_v1_random  /  VQA_v2_random   / VQA_v1 / VQA_v2
+Weighted =2
+soft_max=0
 
 if 'random' in dataset_type:
     datasplit_type='random'
@@ -72,7 +73,13 @@ epoch_num=50
 if Weighted==0:
     save_dir ='fedavg'+dataset_type+"FED"+train_data_name+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)
 elif Weighted==1:
-    save_dir ="Weighted"+dataset_type+"FED"+train_data_name+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title  
+    save_dir ="Weighted"+dataset_type+"FED"+train_data_name+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
+elif Weighted==2:
+    save_dir =f"{normalize}_alpha{alpha}_Weighted"+dataset_type+"FED"+train_data_name+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
+    
+      
+    
+     
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     
@@ -133,6 +140,7 @@ def load_and_split_data(num_clients):
 
 
 
+
 x_train_clients, y_train_clients = load_and_split_data(num_clients)
 
     
@@ -185,8 +193,7 @@ class CustomDataset(Dataset):
         return {'image': image, 'text': text_inputs, 'label': label, 'answers': answers}
         
         
-
-                                        
+                                    
 if model_method=='vit_bert_all_concat_bert_transformer':
     class ViTBertConcatTransformer(nn.Module):
         def __init__(self, vit_model_name='google/vit-base-patch16-224-in21k', bert_model_name='bert-base-uncased', num_classes=num_classes):
@@ -229,6 +236,7 @@ if model_method=='vit_bert_all_concat_bert_transformer':
             return output
                        
             
+
 elif model_method=='swinB_bert_all_concat_bert_transformer':
     class ViTBertConcatTransformer(nn.Module):
         def __init__(self, swin_model_name='microsoft/swin-base-patch4-window7-224', bert_model_name='bert-base-uncased', num_classes=num_classes):
@@ -283,8 +291,7 @@ transform = transforms.Compose([
 ])
 
 
-
-def create_data_loaders(x_train, y_train, tokenizer, feature_extractor, batch_size=batch_size):
+def create_data_loaders(x_train, y_train, tokenizer, feature_extractor, batch_size=32):
     train_dataset = CustomDataset(x_train, y_train, tokenizer, feature_extractor, transform=transform)
     #val_dataset = CustomDataset(x_val, y_val, tokenizer, feature_extractor, transform=transform)
  
@@ -295,7 +302,7 @@ def create_data_loaders(x_train, y_train, tokenizer, feature_extractor, batch_si
     
     return train_dataloader
     
-def create_test_dataloader(x_test, y_test, tokenizer, feature_extractor, batch_size=batch_size):
+def create_test_dataloader(x_test, y_test, tokenizer, feature_extractor, batch_size=32):
     test_dataset = CustomDataset(x_test, y_test, tokenizer, feature_extractor, transform=transform)
     
 
@@ -319,7 +326,7 @@ for i in range(num_clients):
     
 
 x_test, y_test = load_test_data(csv_folder)
-test_dataloader = create_test_dataloader(x_test, y_test, bert_tokenizer, vit_feature_extractor, batch_size=batch_size)
+test_dataloader = create_test_dataloader(x_test, y_test, bert_tokenizer, vit_feature_extractor, batch_size=32)
     
                    
 def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_value,num_epochs):
@@ -380,7 +387,7 @@ def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_
         print(f"Saved best model at {model_path}")
         
            
-    return model
+    return model,avg_loss
 
 
 def _manage_saved_models_after_global(save_dir, best_round):
@@ -437,9 +444,77 @@ elif Weighted==1:
         global_model.load_state_dict(global_state_dict)
     
         return global_model
+elif Weighted==2:
+
     
-            
+    def federated_averaging(global_model, client_models, weights,client_loss_list):
+        global_state_dict = global_model.state_dict()
+    
+        num_clients = len(client_models)
         
+        if normalize == 'minmax':
+            weight_min_val = min(weights)
+            weight_max_val = max(weights)
+            weights = [(x - weight_min_val) / (weight_max_val - weight_min_val) for x in weights]
+            
+            
+            loss_min=min(client_loss_list)
+            loss_max=max(client_loss_list)
+            client_loss_list=[(x - loss_min) / (loss_max - loss_min) for x in client_loss_list]
+            print('weights',weights)
+            print('client_loss_list',client_loss_list)
+            
+        elif normalize=='z_score':
+            mean_val = statistics.mean(weights)
+            std_val = statistics.stdev(weights)
+            
+            weights = [(x - mean_val) / (std_val+1e-8) for x in weights]
+        
+            loss_mean_val = statistics.mean(client_loss_list)
+            loss_std_val = statistics.stdev(client_loss_list)
+            
+            client_loss_list = [(x - loss_mean_val) / loss_std_val for x in client_loss_list]
+            
+            print('weights',weights)
+            print('client_loss_list',client_loss_list)
+
+                
+        # Convert weights to a tensor
+        if soft_max==1:
+            client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
+            inv_loss = 1.0 / (client_loss_list + 1e-8) 
+            
+            weights_tensor = torch.tensor(weights, dtype=torch.float32)
+            
+            final_weights = alpha * weights_tensor + (1.0 - alpha) * inv_loss
+            final_weights = F.softmax(torch.tensor(final_weights, dtype=torch.float32), dim=0)
+            
+            
+        else:
+            client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
+            inv_loss = 1.0 / (client_loss_list + 1e-8) 
+            
+            weights_tensor = torch.tensor(weights, dtype=torch.float32)
+            final_weights = alpha * weights_tensor + (1.0 - alpha) * inv_loss
+            
+
+        total_weight = final_weights.sum()
+    
+        for key in global_state_dict.keys():
+            # Stack and weigh updates
+            weighted_updates = torch.stack(
+                [client_models[i].state_dict()[key].float() * final_weights[i] for i in range(num_clients)],
+                dim=0
+            )
+            # Aggregate weighted updates
+            global_state_dict[key] = weighted_updates.sum(dim=0) / total_weight
+            print('total_weight',total_weight)
+        global_model.load_state_dict(global_state_dict)
+    
+        return global_model
+        
+        
+                
 
 
 def get_best_global_accuracy(save_dir):
@@ -471,6 +546,7 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
         print(f"Round {round_value + 1}/{round_num}")
 
         client_models = []
+        client_loss_list=[]
         for client_idx in range(num_clients):
             # Initialize a local model and optimizer
             client_model = copy.deepcopy(global_model)
@@ -482,12 +558,15 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
             #val_dataloader = val_dataloaders[client_idx]
                                             
             # Train the local model     
-            trained_model = train_local_model(client_model, train_dataloader, optimizer, criterion , client_idx,round_value ,num_epochs_per_round)
+            trained_model,client_loss = train_local_model(client_model, train_dataloader, optimizer, criterion , client_idx,round_value ,num_epochs_per_round)
             client_models.append(trained_model)
+            client_loss_list.append(client_loss)
+            
+            
         if Weighted==0:
             # Aggregate models using FedAvg
             global_model = federated_averaging(global_model, client_models)
-        else:
+        elif Weighted==1:
             if dataset_type=='VQA_v1':
                 if num_clients==2:
                     answer_hetero=[1,1.42]
@@ -497,13 +576,6 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
                     answer_hetero=[1,1,1,1.85]
                 elif num_clients==5:
                     answer_hetero=[1,1,1,1,2.06]
-                elif num_clients==10:
-                    answer_hetero=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 3.12]
-                elif num_clients==15:
-                    answer_hetero=[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.36,3.83]    
-                    
-                    
-                    
             elif dataset_type=='VQA_v2':
                  
                 if num_clients==2:
@@ -522,7 +594,10 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
                     answer_hetero=[1	,1	,1,	1	,1	,1.17,	2,	2	,2	,2,	2,	2	,2,	2,	2	,2	,2,	2,	2.32	,7.3]
 
 
-
+            elif dataset_type=='VQA_v2_random':
+                if num_clients==5:
+                    answer_hetero=[1.29,1.29,1.29,1.29,1.29]
+                
             elif dataset_type=='textvqa':
                 if num_clients==2:
                     answer_hetero=[1.0 ,1.41]
@@ -533,10 +608,47 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
                 elif num_clients==5:
                     answer_hetero=[1.0, 1.0, 1.0 ,1.0, 2.02]
                      
-                     
+
+            global_model=federated_averaging(global_model,client_models,answer_hetero)
+            
+            
+        elif Weighted==2:# with loss
+            if dataset_type=='VQA_v1':
+                if num_clients==2:
+                    answer_hetero=[1,1.42]
+                elif num_clients==3:
+                    answer_hetero=[1,1,1.64]
+                elif num_clients==4:
+                    answer_hetero=[1,1,1,1.85]
+                elif num_clients==5:
+                    answer_hetero=[1,1,1,1,2.06]
+            elif dataset_type=='VQA_v2':
+                 
+                if num_clients==2:
+                    answer_hetero=[1.42 ,2.56]
+                elif num_clients==3:
+                    answer_hetero=[1.13, 2.0, 2.84]
+                elif num_clients==4:
+                    answer_hetero=[ 1.0, 1.83, 2.0, 3.12]
+                elif num_clients==5:
+                    answer_hetero=[ 1.0, 1.54 ,2.0, 2.0, 3.4]
+                elif num_clients==10:
+                    answer_hetero=[1,	1	,1.09,	2,	2	,2,	2	,2,	2	,4.81]
+                elif num_clients==15:
+                    answer_hetero=[1	,1	,1	,1	,1	,2	,2	,2	,2	,2	,2	,2	,2,	2	,6.21]
+                elif num_clients==20:
+                    answer_hetero=[1	,1	,1,	1	,1	,1.17,	2,	2	,2	,2,	2,	2	,2,	2,	2	,2	,2,	2,	2.32	,7.3]
+
+
+            elif dataset_type=='VQA_v2_random':
+                if num_clients==5:
+                    answer_hetero=[1.29,1.29,1.29,1.29,1.29]
+                
+                
                     
            
-            global_model=federated_averaging(global_model,client_models,answer_hetero)
+            global_model=federated_averaging(global_model,client_models,answer_hetero,client_loss_list)
+        
         
         # Evaluate the global model
         test_accuracy = evaluate_global_model(global_model, test_dataloader, x_test, y_test, labelencoder, round_value+1)
@@ -699,7 +811,6 @@ def evaluate_test(model, dataloader, x_test, y_test, labelencoder):
             all_predictions.append(predicted.cpu().numpy())
             all_labels.append(labels.cpu().numpy())
 
-
     all_predictions = np.concatenate(all_predictions)
     all_labels = np.concatenate(all_labels)
 
@@ -715,17 +826,13 @@ def evaluate_global_model(global_model, test_dataloader, x_test, y_test, labelen
     print(f"Global Model Test Accuracy: {test_accuracy:.2f}%")    
     return test_accuracy
     
-
+    
 
 
 # Initialize the global model
 global_model = ViTBertConcatTransformer()
 global_model = global_model.to(device)
-    
-    
 
 
-    
-    
-
+  
 global_model = federated_learning(global_model, num_clients, num_epochs_per_round, round_num,start_epoch)
