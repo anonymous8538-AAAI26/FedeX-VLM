@@ -27,7 +27,8 @@ if 'swin' in model_method:
     from transformers import AutoImageProcessor
     from transformers import SwinModel,T5Model
     print('swin')
-dataset_type='VQA_v1'#VQA_v1 /VQA_v2
+    
+dataset_type='VQA_v1'    #VQA_v1 /VQA_v2
 
 if  'random' in dataset_type:
     title_mid='random'
@@ -35,9 +36,7 @@ else:
     title_mid='all'
    
 
-folder ='WeightedVQA_v1FEDUlen_clientall15_vit_bert_all_concat_bert_transformerepcoh_50soft_max'
-
-
+folder ='WeightedVQA_v1FEDUlen_clientall15_vit_bert_all_concat_bert_transformerepcoh_50soft_max'     #saved name of model
 
 csv_folder=f'Datasets/{dataset_type}/'
 
