@@ -25,6 +25,20 @@ import statistics
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import yaml
+
+with open('config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+
+learning_rate = config['learning_rate']
+epsilon = config['epsilon']
+batch_size = config['batch_size']
+num_epochs = config['num_epochs']
+alpha = config['alpha']
+dataset_type = config['dataset']
+num_clients=config['num_clients']
+normalize=config['normalize']
+round_num=config['round_num']
 
 device = torch.device('cuda:7' if torch.cuda.is_available() else 'cpu')
 
@@ -36,21 +50,16 @@ torch.cuda.manual_seed_all(42)
 random.seed(42)
 
 model_method='vit_bert_all_concat_bert_transformer'
-num_clients=5
-alpha=0.7
-normalize='z_score'
-train_data_name='Ulen_client' # client_index
 
-validation_accuracy_must_measure=0#val test or not
 
 # Example usage
 num_epochs_per_round = 1
-round_num = 50
+
 start_epoch=0
 
 dir_location = '../train2014'
 image_dir_val = '../val2014'
-dataset_type='VQA_v2'#VQA_v1_random  /  VQA_v2_random   / VQA_v1 / VQA_v2
+
 Weighted =2
 soft_max=0
 
@@ -67,15 +76,14 @@ if soft_max==1:
 else:
     soft_max_title=''
 
-scenario_type = train_data_name.split('_')[0]
 epoch_num=50
 
 if Weighted==0:
-    save_dir ='fedavg'+dataset_type+"FED"+train_data_name+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)
+    save_dir ='fedavg'+dataset_type+"FED"+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)
 elif Weighted==1:
-    save_dir ="Weighted"+dataset_type+"FED"+train_data_name+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
+    save_dir ="Weighted"+dataset_type+"FED"+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
 elif Weighted==2:
-    save_dir =f"{normalize}_alpha{alpha}_Weighted"+dataset_type+"FED"+train_data_name+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
+    save_dir =f"{normalize}_alpha{alpha}_Weighted"+dataset_type+"FED"+datasplit_type+str(num_clients)+ "_"+model_method+"epcoh_"+str(epoch_num)+soft_max_title 
     
       
     
@@ -110,8 +118,8 @@ def load_and_split_data(num_clients):
 
     if 'all' in datasplit_type:
         for i in range(num_clients):
-            print(csv_folder+str(num_clients)+"clients"+"/X_"+train_data_name+str(i+1)+".csv")
-            x_train = pd.read_csv(csv_folder+str(num_clients)+"clients"+"/X_"+train_data_name+str(i+1)+".csv")
+
+            x_train = pd.read_csv(f"{csv_folder}/{num_clients}clients/X_{i+1}.csv")
             x_train['answer_labelencoded']=labelencoder.transform(x_train['answer_preprocessed'])
             y_train=x_train['answer_labelencoded']
         
@@ -122,8 +130,8 @@ def load_and_split_data(num_clients):
     
     elif 'random' in datasplit_type:
         for i in range(num_clients):
-            print(csv_folder+"/"+str(num_clients)+"clients"+"/X_train_index"+str(i+1)+".csv")
-            x_train=pd.read_csv(csv_folder+"/"+str(num_clients)+"clients"+"/X_train_index"+str(i+1)+".csv")
+            
+            x_train=pd.read_csv(f"{csv_folder}/{num_clients}clients/X_train_index{i+1}.csv")
     
             x_train['answer_labelencoded']=labelencoder.transform(x_train['answer_preprocessed'])
             y_train=x_train['answer_labelencoded']
@@ -225,8 +233,7 @@ if model_method=='vit_bert_all_concat_bert_transformer':
             bert_concat = bert_outputs.last_hidden_state  # CLS token + Token embeddings
   
             combined_embeddings = torch.cat((vit_concat, bert_concat), dim=1)
-            #print('combined_embeddings', combined_embeddings.shape)
-    
+         
             encoder_outputs = self.bert_encoder(combined_embeddings)
             transformer_output = encoder_outputs.last_hidden_state
 
@@ -266,8 +273,7 @@ elif model_method=='swinB_bert_all_concat_bert_transformer':
     
             # Concatenate embeddings from Swin-B and BERT
             combined_embeddings = torch.cat((swin_concat, bert_concat), dim=1)
-            #print('combined_embeddings', combined_embeddings.shape)
-    
+         
             # Pass through BERT encoder
             encoder_outputs = self.bert_encoder(combined_embeddings)
             transformer_output = encoder_outputs.last_hidden_state
@@ -291,7 +297,7 @@ transform = transforms.Compose([
 ])
 
 
-def create_data_loaders(x_train, y_train, tokenizer, feature_extractor, batch_size=32):
+def create_data_loaders(x_train, y_train, tokenizer, feature_extractor, batch_size=batch_size):
     train_dataset = CustomDataset(x_train, y_train, tokenizer, feature_extractor, transform=transform)
     #val_dataset = CustomDataset(x_val, y_val, tokenizer, feature_extractor, transform=transform)
  
@@ -302,7 +308,7 @@ def create_data_loaders(x_train, y_train, tokenizer, feature_extractor, batch_si
     
     return train_dataloader
     
-def create_test_dataloader(x_test, y_test, tokenizer, feature_extractor, batch_size=32):
+def create_test_dataloader(x_test, y_test, tokenizer, feature_extractor, batch_size=batch_size):
     test_dataset = CustomDataset(x_test, y_test, tokenizer, feature_extractor, transform=transform)
     
 
@@ -326,7 +332,7 @@ for i in range(num_clients):
     
 
 x_test, y_test = load_test_data(csv_folder)
-test_dataloader = create_test_dataloader(x_test, y_test, bert_tokenizer, vit_feature_extractor, batch_size=32)
+test_dataloader = create_test_dataloader(x_test, y_test, bert_tokenizer, vit_feature_extractor, batch_size=batch_size)
     
                    
 def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_value,num_epochs):
@@ -381,7 +387,7 @@ def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_
         save_metrics(client_idx+1 , round_value + 1, avg_loss, train_acc,test_accuracy, epoch_duration,0)
         
        
-        model_filename = f"client{client_idx+ 1}_round_{round_value+1}_{train_data_name}_epoch_{epoch + 1}_test_accuracy_{test_accuracy:.4f}.pt"
+        model_filename = f"client{client_idx+ 1}_round_{round_value+1}_epoch_{epoch + 1}_test_accuracy_{test_accuracy:.4f}.pt"
         model_path = os.path.join(save_dir, model_filename)
         torch.save(model.state_dict(), model_path)
         print(f"Saved best model at {model_path}")
@@ -468,7 +474,7 @@ elif Weighted==2:
             mean_val = statistics.mean(weights)
             std_val = statistics.stdev(weights)
             
-            weights = [(x - mean_val) / (std_val+1e-8) for x in weights]
+            weights = [(x - mean_val) / (std_val+epsilon) for x in weights]
         
             loss_mean_val = statistics.mean(client_loss_list)
             loss_std_val = statistics.stdev(client_loss_list)
@@ -482,7 +488,7 @@ elif Weighted==2:
         # Convert weights to a tensor
         if soft_max==1:
             client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
-            inv_loss = 1.0 / (client_loss_list + 1e-8) 
+            inv_loss = 1.0 / (client_loss_list + epsilon) 
             
             weights_tensor = torch.tensor(weights, dtype=torch.float32)
             
@@ -492,7 +498,7 @@ elif Weighted==2:
             
         else:
             client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
-            inv_loss = 1.0 / (client_loss_list + 1e-8) 
+            inv_loss = 1.0 / (client_loss_list + epsilon) 
             
             weights_tensor = torch.tensor(weights, dtype=torch.float32)
             final_weights = alpha * weights_tensor + (1.0 - alpha) * inv_loss
@@ -550,7 +556,7 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
         for client_idx in range(num_clients):
             # Initialize a local model and optimizer
             client_model = copy.deepcopy(global_model)
-            optimizer = Adam(client_model.parameters(), lr=1e-5)
+            optimizer = Adam(client_model.parameters(), lr=learning_rate)
             criterion = nn.CrossEntropyLoss()
             
             # Retrieve the dataloaders for the current client
@@ -654,21 +660,7 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
         test_accuracy = evaluate_global_model(global_model, test_dataloader, x_test, y_test, labelencoder, round_value+1)
         print(f"Global Model Test Accuracy: {test_accuracy:.2f}%")
 
-        # Check if the current global model is the best one and save it
-        if test_accuracy > best_accuracy:
-            best_accuracy = test_accuracy
-            best_round = round_value + 1
-            
-            # Save the global model
-            global_model_filename = f"global_round_{best_round}_test_accuracy_{test_accuracy:.4f}.pt"
-            global_model_path = os.path.join(save_dir, global_model_filename)
-            torch.save(global_model.state_dict(), global_model_path)
-            print(f"Saved best global model at {global_model_path}")
-            
-            # Delete previous models that are not from the best round
-            _manage_saved_models_after_global(save_dir, best_round)
-            
-            
+
 
     return global_model
     
@@ -689,9 +681,7 @@ def calculate_accuracy(predictions, x_test, y_test):
         answers_list = answers_str.replace("'", "").split(", ")
         
         temp = 0
-        print('answers_list', answers_list)
-        print('predicted_classes', predicted_classes)
-        
+  
         for actual_ans in answers_list:
             actual_ans = actual_ans.strip() 
             if str(actual_ans) == predicted_classes:
