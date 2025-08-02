@@ -13,13 +13,15 @@ This is an implementation for 'FedeX-VLM: Towards Knowledge Harmonization in Het
 
 ## Ready for data
 Please download the VQA v1 and VQA v2 datasets manually from the official VQA website and place them in the appropriate directory.
+The dataset should be located in the same directory as main.py.
+The structure of the dataset is as follows:
 
 
 ## Pre-trained model preperation
 
 | Pre-trained Backbone | Link | 
 | --- | --- | 
-|  ViT-B | 행1 열2 | 
-| Swin-B  | 행2 열2 | 
-|  BERT | 행3 열2 | 
-|  T5 | 행3 열2 | 
+|  ViT-B | [Link](https://huggingface.co/docs/transformers/model_doc/vit) | 
+| Swin-B  | [Link](https://huggingface.co/docs/transformers/model_doc/swin) | 
+|  BERT | [Link](https://huggingface.co/docs/transformers/model_doc/bert)  | 
+|  T5 | [Link](https://huggingface.co/docs/transformers/model_doc/t5) | 
