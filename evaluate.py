@@ -337,7 +337,7 @@ def accuracy_measure_fed(model,all_predictions,client_index_model):
    
     # Calculate accuracy using the labels and predictions
     accuracy = calculate_accuracy(all_predictions, x_test, y_test)   
-    accuracy_path = 'Accuracy.txt'
+    accuracy_path = 'accuracy.txt'
     with open(accuracy_path,"a") as file:
         file.write(client_index_model+'\n'+str(accuracy)+'\n\n')
         
