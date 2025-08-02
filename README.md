@@ -62,7 +62,9 @@ From the full question set Q_img, we extract a subset of unique questions, denot
 To create answer space heterogeneity, we first sort all unique question {q_img,i }where i ∈ [1, N] in the ascending order based on the number of possible answers (i.e., small to large).
 
 
-## Pre-trained model preperation
+## STEP 1) Baseline accuracy
+
+We use standard vision and language models as backbones. Download the pre-trained weights from the links below:
 
 | Pre-trained Backbone | Link | 
 | --- | --- | 
@@ -70,3 +72,35 @@ To create answer space heterogeneity, we first sort all unique question {q_img,i
 | Swin-B  | [Link](https://huggingface.co/docs/transformers/model_doc/swin) | 
 |  BERT | [Link](https://huggingface.co/docs/transformers/model_doc/bert)  | 
 |  T5 | [Link](https://huggingface.co/docs/transformers/model_doc/t5) | 
+
+These models serve as the backbone for our multimodal baseline architecture.
+
+## STEP 2) Baseline accuracy
+Our dataset consists of knowledge-level heterogeneous splits based on the VQA v1 and VQA v2 datasets.
+
+Each split is organized by number of clients:
+
+```
+from dataset_loader import load_split
+
+X1_train, y2_train = load_split("Datasets/VQA_v1/2clients/X_client1.csv", 
+                              "Datasets/VQA_v1/2clients/y_client1.csv") ...
+```
+
+## STEP 3) Set Hyperparameters
+Before training, set appropriate training configurations. Example:
+
+```
+learning_rate:  0.00001
+criterion : CrossEntropyLoss
+ϵ : 1e-8
+batch_size: 32
+num_epochs: 50
+alpha: 0.5          
+dataset: "VQA_v1"  ...
+```
+
+## STEP 4) Train the Model
+Run the training!
+```python
+python main.py
