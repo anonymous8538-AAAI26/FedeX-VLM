@@ -92,13 +92,14 @@ X1_train, y2_train = load_split("Datasets/VQA_v1/2clients/X_client1.csv",
 Before training, set appropriate training configurations. Example:
 
 ```yaml
-learning_rate: 0.00001
-criterion: CrossEntropyLoss
+learning_rate: 1e-5
 epsilon: 1e-8
 batch_size: 32
-num_epochs: 50
-alpha: 0.5
+round_num: 50
+alpha: 0.7
 dataset: "VQA_v1"
+num_clients: 5
+normalize: "z_score"
 ...
 ```
 
