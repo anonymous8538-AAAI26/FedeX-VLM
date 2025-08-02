@@ -1,0 +1,2 @@
+VQA_v1FEDUlen_clientall2_vit_bert_all_concat_bert_transformerepcoh_50/global_round_11_test_accuracy_60.5333.pt
+59.043987965558195
