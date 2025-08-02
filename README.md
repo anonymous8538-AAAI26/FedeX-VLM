@@ -91,13 +91,13 @@ X1_train, y2_train = load_split("Datasets/VQA_v1/2clients/X_client1.csv",
 ## STEP 3) Set Hyperparameters
 Before training, set appropriate training configurations. Example:
 
-```
-learning_rate:  0.00001
-criterion : CrossEntropyLoss
-ϵ : 1e-8
+```yaml
+learning_rate: 0.00001
+criterion: CrossEntropyLoss
+epsilon: 1e-8
 batch_size: 32
 num_epochs: 50
-alpha: 0.5          
+alpha: 0.5
 dataset: "VQA_v1"
 ...
 ```
@@ -105,7 +105,7 @@ dataset: "VQA_v1"
 ## STEP 4) Train the Model
 Run the training!
 ```python
-python main.py
+python main.py --config config.yaml
 ```
 
 ## STEP 5) Evaluate
