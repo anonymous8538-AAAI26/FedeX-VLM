@@ -84,7 +84,8 @@ Each split is organized by number of clients:
 from dataset_loader import load_split
 
 X1_train, y2_train = load_split("Datasets/VQA_v1/2clients/X_client1.csv", 
-                              "Datasets/VQA_v1/2clients/y_client1.csv") ...
+                              "Datasets/VQA_v1/2clients/y_client1.csv")
+...
 ```
 
 ## STEP 3) Set Hyperparameters
@@ -97,7 +98,8 @@ criterion : CrossEntropyLoss
 batch_size: 32
 num_epochs: 50
 alpha: 0.5          
-dataset: "VQA_v1"  ...
+dataset: "VQA_v1"
+...
 ```
 
 ## STEP 4) Train the Model
