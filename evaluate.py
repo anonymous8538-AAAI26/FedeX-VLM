@@ -311,33 +311,6 @@ class CustomDataset(Dataset):
         return {'image': image, 'text': text_inputs, 'label': label,'answers':answers}
         
 
-def accuracy_measure(all_predictions):
-    with torch.no_grad(): 
-        for idx,batch in enumerate(test_dataloader):
-            start_time = time.time() 
-            print('batch',idx , '/',len(test_dataloader))
-            images = batch['image'].to(device)
-            texts = {k: v.to(device) for k, v in batch['text'].items()}
-           
-            outputs = model(images, texts)
-            _, predicted = torch.max(outputs, 1)
-    
-            all_predictions.append(predicted.cpu().numpy())
-            torch.cuda.empty_cache()
-            end_time = time.time()  
-            elapsed_time = end_time - start_time  
-            print(f"{model_name} Time for batch {idx + 1}/{len(test_dataloader)}: {elapsed_time:.4f} seconds")
-            
-            
-    all_predictions = np.concatenate(all_predictions)
-   
-    # Calculate accuracy using the labels and predictions
-    accuracy = calculate_accuracy(all_predictions, x_test, y_test)   
-    accuracy_path = 'accuracy.txt'
-    with open(accuracy_path,"a") as file:
-        file.write(folder+'\n'+str(accuracy)+'\n\n')
-        
-    return accuracy
     
 def accuracy_measure_fed(model,all_predictions,client_index_model):
 
@@ -364,7 +337,7 @@ def accuracy_measure_fed(model,all_predictions,client_index_model):
    
     # Calculate accuracy using the labels and predictions
     accuracy = calculate_accuracy(all_predictions, x_test, y_test)   
-    accuracy_path = 'accuracy_fed.txt'
+    accuracy_path = 'Accuracy.txt'
     with open(accuracy_path,"a") as file:
         file.write(client_index_model+'\n'+str(accuracy)+'\n\n')
         
