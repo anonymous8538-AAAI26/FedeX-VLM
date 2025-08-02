@@ -33,7 +33,6 @@ with open('config.yaml', 'r') as f:
 learning_rate = config['learning_rate']
 epsilon = config['epsilon']
 batch_size = config['batch_size']
-num_epochs = config['num_epochs']
 alpha = config['alpha']
 dataset_type = config['dataset']
 num_clients=config['num_clients']
