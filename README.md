@@ -104,3 +104,12 @@ dataset: "VQA_v1"  ...
 Run the training!
 ```python
 python main.py
+```
+
+## STEP 5) Evaluate
+To evaluate the trained model:
+
+```python
+python evaluate.py
+```
+
