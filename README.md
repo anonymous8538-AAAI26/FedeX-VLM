@@ -16,9 +16,9 @@ The Datasets/ directory contains our knowledge-level heterogeneous splits of the
 
 Details of each dataset split are summarized in the table below:
 
-<img width="600" height="250" alt="image" src="https://github.com/user-attachments/assets/403c2a5b-29ad-4e11-b67e-76fdf864956d" />
+<img width="600" height="270" alt="image" src="https://github.com/user-attachments/assets/403c2a5b-29ad-4e11-b67e-76fdf864956d" />
 
-<img width="600" height="250" alt="image" src="https://github.com/user-attachments/assets/ae7603cb-23ad-4a7c-bf99-a99c18a6578d" />
+<img width="600" height="270" alt="image" src="https://github.com/user-attachments/assets/ae7603cb-23ad-4a7c-bf99-a99c18a6578d" />
 
 The structure of the dataset is as follows:
 
