@@ -73,11 +73,9 @@ if soft_max==1:
 
 
 if Weighted==0:
-    save_dir =f'fedavg{dataset_type}FED{datasplit_type}{num_clients}_{model_method}epcoh_{round_num}'
+    save_dir =f'saved_model/fedavg{dataset_type}FED{datasplit_type}{num_clients}_{model_method}epcoh_{round_num}'
 elif Weighted==1:
-    save_dir =f"Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}"
-elif Weighted==2:
-    save_dir =f"{normalize}_alpha{alpha}_Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}{soft_max_title}"
+    save_dir =f"saved_model/{normalize}_alpha{alpha}_Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}{soft_max_title}"
     
       
     
@@ -419,33 +417,8 @@ if Weighted==0:
         global_model.load_state_dict(global_state_dict)
     
         return global_model
+        
 elif Weighted==1:
-    def federated_averaging(global_model, client_models, weights):
-        global_state_dict = global_model.state_dict()
-    
-        num_clients = len(client_models)
-    
-        # Convert weights to a tensor
-        if soft_max==1:
-            weights_tensor = F.softmax(torch.tensor(weights, dtype=torch.float32), dim=0)
-        else:
-            weights_tensor = torch.tensor(weights, dtype=torch.float32)
-        total_weight = weights_tensor.sum()
-    
-        for key in global_state_dict.keys():
-            # Stack and weigh updates
-            weighted_updates = torch.stack(
-                [client_models[i].state_dict()[key].float() * weights_tensor[i] for i in range(num_clients)],
-                dim=0
-            )
-            # Aggregate weighted updates
-            global_state_dict[key] = weighted_updates.sum(dim=0) / total_weight
-            print('total_weight',total_weight)
-        global_model.load_state_dict(global_state_dict)
-    
-        return global_model
-elif Weighted==2:
-
     
     def federated_averaging(global_model, client_models, weights,client_loss_list):
         global_state_dict = global_model.state_dict()
@@ -566,53 +539,9 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
         if Weighted==0:
             # Aggregate models using FedAvg
             global_model = federated_averaging(global_model, client_models)
-        elif Weighted==1:
-            if dataset_type=='VQA_v1':
-                if num_clients==2:
-                    answer_hetero=[1,1.42]
-                elif num_clients==3:
-                    answer_hetero=[1,1,1.64]
-                elif num_clients==4:
-                    answer_hetero=[1,1,1,1.85]
-                elif num_clients==5:
-                    answer_hetero=[1,1,1,1,2.06]
-            elif dataset_type=='VQA_v2':
-                 
-                if num_clients==2:
-                    answer_hetero=[1.42 ,2.56]
-                elif num_clients==3:
-                    answer_hetero=[1.13, 2.0, 2.84]
-                elif num_clients==4:
-                    answer_hetero=[ 1.0, 1.83, 2.0, 3.12]
-                elif num_clients==5:
-                    answer_hetero=[ 1.0, 1.54 ,2.0, 2.0, 3.4]
-                elif num_clients==10:
-                    answer_hetero=[1,	1	,1.09,	2,	2	,2,	2	,2,	2	,4.81]
-                elif num_clients==15:
-                    answer_hetero=[1	,1	,1	,1	,1	,2	,2	,2	,2	,2	,2	,2	,2,	2	,6.21]
-                elif num_clients==20:
-                    answer_hetero=[1	,1	,1,	1	,1	,1.17,	2,	2	,2	,2,	2,	2	,2,	2,	2	,2	,2,	2,	2.32	,7.3]
-
-
-            elif dataset_type=='VQA_v2_random':
-                if num_clients==5:
-                    answer_hetero=[1.29,1.29,1.29,1.29,1.29]
-                
-            elif dataset_type=='textvqa':
-                if num_clients==2:
-                    answer_hetero=[1.0 ,1.41]
-                elif num_clients==3:
-                    answer_hetero=[1.0, 1.0 ,1.61]
-                elif num_clients==4:
-                    answer_hetero=[  1.0, 1.0, 1.0, 1.82]
-                elif num_clients==5:
-                    answer_hetero=[1.0, 1.0, 1.0 ,1.0, 2.02]
-                     
-
-            global_model=federated_averaging(global_model,client_models,answer_hetero)
+     
             
-            
-        elif Weighted==2:# with loss
+        elif Weighted==1:# with loss
             if dataset_type=='VQA_v1':
                 if num_clients==2:
                     answer_hetero=[1,1.42]
