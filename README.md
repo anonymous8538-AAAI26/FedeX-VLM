@@ -62,7 +62,7 @@ From the full question set Q_img, we extract a subset of unique questions, denot
 To create answer space heterogeneity, we first sort all unique question {q_img,i }where i ∈ [1, N] in the ascending order based on the number of possible answers (i.e., small to large).
 
 
-## STEP 1) Baseline accuracy
+## STEP 1) Prepare Pre-trained Vision and Language Models
 
 We use standard vision and language models as backbones. Download the pre-trained weights from the links below:
 
@@ -75,7 +75,7 @@ We use standard vision and language models as backbones. Download the pre-traine
 
 These models serve as the backbone for our multimodal baseline architecture.
 
-## STEP 2) Baseline accuracy
+## STEP 2) Knowledge-level Data Splits for Federated VQA
 Our dataset consists of knowledge-level heterogeneous splits based on the VQA v1 and VQA v2 datasets.
 
 Each split is organized by number of clients:
