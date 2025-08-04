@@ -114,6 +114,6 @@ python main.py --config config.yaml
 To evaluate the trained model:
 
 ```python
-python evaluate.py
+python evaluate.py --config config.yaml
 ```
 
