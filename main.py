@@ -26,6 +26,8 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import yaml
+from transformers import AutoImageProcessor
+from transformers import SwinModel,T5Model
 
 # Load hyperparameters and configuration from config.yaml
 with open('config.yaml', 'r') as f:
@@ -265,6 +267,46 @@ elif model_method=='Lvit_bert_all_concat_bert_transformer':
                 
             return output
         
+
+elif model_method=='vit_Bt5_all_concat_bert_transformer':
+    class ViTBertConcatTransformer(nn.Module):
+        def __init__(self, vit_model_name='google/vit-base-patch16-224-in21k', t5_model='t5-base',bert_model_name='bert-base-uncased', num_classes=num_classes):
+            super(ViTBertConcatTransformer, self).__init__()
+
+          
+            self.vit = ViTModel.from_pretrained(vit_model_name)
+            self.bert = T5Model.from_pretrained(t5_model)
+
+            full_bert_model = BertModel.from_pretrained(bert_model_name)
+          
+            self.bert_encoder  = full_bert_model.encoder
+
+            # Fully Connected Layer for classification
+            self.fc = nn.Linear(full_bert_model.config.hidden_size, num_classes)
+            
+            
+            
+        def forward(self, image, text):
+            # ViT forward pass
+            
+            vit_outputs = self.vit(pixel_values=image)
+            vit_concat = vit_outputs.last_hidden_state  # CLS token + Patch tokens
+ 
+            bert_outputs = self.bert.encoder(input_ids=text['input_ids'], attention_mask=text['attention_mask'])
+            bert_concat = bert_outputs.last_hidden_state  # CLS token + Token embeddings
+  
+            combined_embeddings = torch.cat((vit_concat, bert_concat), dim=1)
+            #print('combined_embeddings', combined_embeddings.shape)
+    
+            encoder_outputs = self.bert_encoder(combined_embeddings)
+            transformer_output = encoder_outputs.last_hidden_state
+
+            # Classification output
+            output = self.fc(transformer_output[:, 0, :])  # Use the CLS token for classification
+
+
+            return output  
+
         
 
 elif model_method=='swinB_bert_all_concat_bert_transformer':
