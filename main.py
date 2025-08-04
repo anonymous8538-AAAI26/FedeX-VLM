@@ -221,7 +221,51 @@ if model_method=='vit_bert_all_concat_bert_transformer':
                 
             return output
                        
+elif model_method=='Lvit_bert_all_concat_bert_transformer':
+    class ViTBertConcatTransformer(nn.Module):
+        def __init__(self, vit_model_name='google/vit-large-patch16-224-in21k', bert_model_name='bert-base-uncased', num_classes=num_classes):
+            super(ViTBertConcatTransformer, self).__init__()
+
+           
+            self.vit = ViTModel.from_pretrained(vit_model_name)
+            self.bert = BertModel.from_pretrained(bert_model_name)
             
+            self.vit_projector = nn.Linear(self.vit.config.hidden_size, 768) 
+            
+            full_bert_model = BertModel.from_pretrained(bert_model_name)
+     
+            self.bert_encoder  = full_bert_model.encoder
+
+            # Fully Connected Layer for classification
+            self.fc = nn.Linear(full_bert_model.config.hidden_size, num_classes)
+            
+            
+            
+        def forward(self, image, text):
+            # ViT forward pass
+            
+            vit_outputs = self.vit(pixel_values=image)
+            vit_concat = vit_outputs.last_hidden_state  # CLS token + Patch tokens
+ 
+            bert_outputs = self.bert(input_ids=text['input_ids'], attention_mask=text['attention_mask'])
+            bert_concat = bert_outputs.last_hidden_state  # CLS token + Token embeddings
+            vit_concat = self.vit_projector(vit_concat)  # (batch_size, seq_len_vit, 768)
+
+            
+            
+            
+            combined_embeddings = torch.cat((vit_concat, bert_concat), dim=1)
+            #print('combined_embeddings', combined_embeddings.shape)
+    
+            encoder_outputs = self.bert_encoder(combined_embeddings)
+            transformer_output = encoder_outputs.last_hidden_state
+
+            # Classification output
+            output = self.fc(transformer_output[:, 0, :])  # Use the CLS token for classification
+                
+            return output
+        
+        
 
 elif model_method=='swinB_bert_all_concat_bert_transformer':
     class ViTBertConcatTransformer(nn.Module):
