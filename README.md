@@ -107,14 +107,14 @@ eval_folder: "saved_model/z_score_alpha0.7_WeightedVQA_v2FEDUlen_clientall5_vit_
 ## STEP 4) Train the Model
 Run the training!
 ```python
-python main.py --config config.yaml
+python main.py
 ```
 
 ## STEP 5) Evaluate
 To evaluate the trained model:
 
 ```python
-python evaluate.py --config config.yaml
+python evaluate.py
 ```
 Make sure to set the 'eval_folder' parameter in your config.yaml file to the directory containing the the model you want to evaluate on.
 
