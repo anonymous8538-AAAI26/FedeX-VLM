@@ -14,7 +14,11 @@ from torchvision import transforms, models
 import time
 from transformers import AutoImageProcessor
 from transformers import SwinModel,T5Model
+import yaml
 
+with open('config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+folder=config['folder']
 
 labelencoder = LabelEncoder()
 
@@ -23,7 +27,6 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # Define model architecture type and folder to load the saved model
 model_method='vit_bert_all_concat_bert_transformer'
-folder ='WeightedVQA_v1FEDUlen_clientall15_vit_bert_all_concat_bert_transformerepcoh_50soft_max'     #saved name of model
 bert_size=128
 
 
