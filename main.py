@@ -27,6 +27,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import yaml
 
+# Load hyperparameters and configuration from config.yaml
 with open('config.yaml', 'r') as f:
     config = yaml.safe_load(f)
 
@@ -39,6 +40,8 @@ dataset_type = config['dataset']
 num_clients=config['num_clients']
 normalize=config['normalize']
 
+
+# Set device 
 device = torch.device('cuda:7' if torch.cuda.is_available() else 'cpu')
 
 torch.backends.cudnn.deterministic = True
@@ -48,41 +51,38 @@ torch.manual_seed(42)
 torch.cuda.manual_seed_all(42)
 random.seed(42)
 
+# Define model architecture identifier
 model_method='vit_bert_all_concat_bert_transformer'
 
 
-# Example usage
+# Federated learning settings
 num_epochs_per_round = 1
 start_epoch=0
-Weighted =1
 soft_max=1
 
+# Determine data splitting method
 if 'random' in dataset_type:
     datasplit_type='random'
 else:
     datasplit_type='all'
 
-
+# Set path to dataset CSVs
 csv_folder=f'DATASETs/{dataset_type}/'
-
+# If softmax is used, add tag for naming
 if soft_max==1:
     soft_max_title='soft_max'
 
-if Weighted==0:
-    save_dir =f'saved_model/fedavg{dataset_type}FED{datasplit_type}{num_clients}_{model_method}epcoh_{round_num}'
-elif Weighted==1:
-    save_dir =f"saved_model/{normalize}_alpha{alpha}_Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}{soft_max_title}"
+
+save_dir =f"saved_model/{normalize}_alpha{alpha}_Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}{soft_max_title}"
     
       
-    
+
      
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     
 
-# CustomLabelEncoder 
 labelencoder = LabelEncoder()
-
 labelencoder_df=pd.read_csv(csv_folder+f"Train_{dataset_type}_preprocessed.csv")
 labelencoder.fit(labelencoder_df['answer_preprocessed'])
 num_classes = len(labelencoder_df['answer_preprocessed'].unique())
@@ -120,7 +120,6 @@ def load_and_split_data(num_clients):
         for i in range(num_clients):
             
             x_train=pd.read_csv(f"{csv_folder}/{num_clients}clients/X_train_index{i+1}.csv")
-    
             x_train['answer_labelencoded']=labelencoder.transform(x_train['answer_preprocessed'])
             y_train=x_train['answer_labelencoded']
             x_train_clients.append(x_train)
@@ -128,11 +127,6 @@ def load_and_split_data(num_clients):
 
 
     return x_train_clients, y_train_clients
-
-
-
-    
-
 
 
 
@@ -195,13 +189,11 @@ if model_method=='vit_bert_all_concat_bert_transformer':
         def __init__(self, vit_model_name='google/vit-base-patch16-224-in21k', bert_model_name='bert-base-uncased', num_classes=num_classes):
             super(ViTBertConcatTransformer, self).__init__()
 
-           
+            # Load pre-trained Vision Transformer (ViT) model
             self.vit = ViTModel.from_pretrained(vit_model_name)
+            # Load pre-trained BERT model
             self.bert = BertModel.from_pretrained(bert_model_name)
-            
-            
-            
-            
+
             full_bert_model = BertModel.from_pretrained(bert_model_name)
      
             self.bert_encoder  = full_bert_model.encoder
@@ -213,15 +205,14 @@ if model_method=='vit_bert_all_concat_bert_transformer':
             
         def forward(self, image, text):
             # ViT forward pass
-            
             vit_outputs = self.vit(pixel_values=image)
             vit_concat = vit_outputs.last_hidden_state  # CLS token + Patch tokens
- 
+            # Forward pass through BERT
             bert_outputs = self.bert(input_ids=text['input_ids'], attention_mask=text['attention_mask'])
             bert_concat = bert_outputs.last_hidden_state  # CLS token + Token embeddings
-  
+            # Concatenate ViT and BERT outputs along the sequence dimension
             combined_embeddings = torch.cat((vit_concat, bert_concat), dim=1)
-         
+            # Pass the combined sequence through the BERT encoder
             encoder_outputs = self.bert_encoder(combined_embeddings)
             transformer_output = encoder_outputs.last_hidden_state
 
@@ -287,28 +278,18 @@ transform = transforms.Compose([
 
 def create_data_loaders(x_train, y_train, tokenizer, feature_extractor, batch_size=batch_size):
     train_dataset = CustomDataset(x_train, y_train, tokenizer, feature_extractor, transform=transform)
-    #val_dataset = CustomDataset(x_val, y_val, tokenizer, feature_extractor, transform=transform)
- 
-  
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    #val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
- 
+
     
     return train_dataloader
     
 def create_test_dataloader(x_test, y_test, tokenizer, feature_extractor, batch_size=batch_size):
     test_dataset = CustomDataset(x_test, y_test, tokenizer, feature_extractor, transform=transform)
-    
-
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    
     return test_dataloader
         
  
-
-
-
-
-
 train_dataloaders = []
 val_dataloaders = []
 
@@ -316,8 +297,7 @@ val_dataloaders = []
 for i in range(num_clients):
     train_dl = create_data_loaders(x_train_clients[i], y_train_clients[i], bert_tokenizer, vit_feature_extractor)
     train_dataloaders.append(train_dl)
-    #val_dataloaders.append(val_dl)
-    
+
 
 x_test, y_test = load_test_data(csv_folder)
 test_dataloader = create_test_dataloader(x_test, y_test, bert_tokenizer, vit_feature_extractor, batch_size=batch_size)
@@ -348,7 +328,6 @@ def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-
             total_loss += loss.item() * labels.size(0)
             _, predicted = torch.max(outputs, 1)
             correct_preds += (predicted == labels).sum().item()
@@ -357,12 +336,9 @@ def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_
             # Update tqdm description with current training loss
             dataloader_tqdm.set_postfix({'train_loss': total_loss / total_samples,'train_accuracy':train_accuracy})
 
+
         avg_loss = total_loss / total_samples
         train_acc = correct_preds / total_samples
-        
-        # Evaluate on validation set
-        #val_loss, val_acc = evaluate_val(model, val_dataloader, x_val_clients[client_idx], y_val_clients[client_idx], labelencoder)
-        
         epoch_duration = time.time() - start_time
         
         
@@ -385,119 +361,103 @@ def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_
 
 
                            
-if Weighted==0:                                          
-    def federated_averaging(global_model, client_models):
-     
-        global_state_dict = global_model.state_dict()
-        
-    
-        num_clients = len(client_models)
-    
-        for key in global_state_dict.keys():
-            global_state_dict[key] = torch.stack([client_models[i].state_dict()[key].float() for i in range(num_clients)], 0).mean(0)
-        
-        
-        global_model.load_state_dict(global_state_dict)
-    
-        return global_model
-        
-elif Weighted==1:
-    
-    def federated_averaging(global_model, client_models, weights,client_loss_list):
-        global_state_dict = global_model.state_dict()
-    
-        num_clients = len(client_models)
-        
-        if normalize == 'minmax':
-            weight_min_val = min(weights)
-            weight_max_val = max(weights)
-            weights = [(x - weight_min_val) / (weight_max_val - weight_min_val) for x in weights]
-            
-            
-            loss_min=min(client_loss_list)
-            loss_max=max(client_loss_list)
-            client_loss_list=[(x - loss_min) / (loss_max - loss_min) for x in client_loss_list]
-            print('weights',weights)
-            print('client_loss_list',client_loss_list)
-            
-        elif normalize=='z_score':
-            mean_val = statistics.mean(weights)
-            std_val = statistics.stdev(weights)
-            
-            weights = [(x - mean_val) / (std_val+epsilon) for x in weights]
-        
-            loss_mean_val = statistics.mean(client_loss_list)
-            loss_std_val = statistics.stdev(client_loss_list)
-            
-            client_loss_list = [(x - loss_mean_val) / loss_std_val for x in client_loss_list]
-            
-            print('weights',weights)
-            print('client_loss_list',client_loss_list)
 
-                
-        # Convert weights to a tensor
-        if soft_max==1:
-            client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
-            inv_loss = 1.0 / (client_loss_list + epsilon) 
-            
-            weights_tensor = torch.tensor(weights, dtype=torch.float32)
-            
-            final_weights = alpha * weights_tensor + (1.0 - alpha) * inv_loss
-            final_weights = F.softmax(torch.tensor(final_weights, dtype=torch.float32), dim=0)
-            
-            
-        else:
-            client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
-            inv_loss = 1.0 / (client_loss_list + epsilon) 
-            
-            weights_tensor = torch.tensor(weights, dtype=torch.float32)
-            final_weights = alpha * weights_tensor + (1.0 - alpha) * inv_loss
-            
+    
+def fedex(global_model, client_models, weights,client_loss_list):
+    """
+    Aggregates local client models into a global model using weighted averaging,
+    considering both knowledge level weights and their local training losses.
+    
+    Args:
+        global_model (nn.Module): The current global model to be updated.
+        client_models (list of nn.Module): List of trained client models.
+        weights (list of float): Predefined client-specific weights (e.g., based on data heterogeneity).
+        client_loss_list (list of float): Local training losses from each client.
+    
+    Returns:
+        global_model (nn.Module): The updated global model after aggregation.
+    """
 
-        total_weight = final_weights.sum()
+    # Get the state dictionary (parameters) of the global model
+    global_state_dict = global_model.state_dict()
+    num_clients = len(client_models)
     
-        for key in global_state_dict.keys():
-            # Stack and weigh updates
-            weighted_updates = torch.stack(
-                [client_models[i].state_dict()[key].float() * final_weights[i] for i in range(num_clients)],
-                dim=0
-            )
-            # Aggregate weighted updates
-            global_state_dict[key] = weighted_updates.sum(dim=0) / total_weight
-            print('total_weight',total_weight)
-        global_model.load_state_dict(global_state_dict)
-    
-        return global_model
+    # Normalize the input weights and client losses (if specified)
+    if normalize == 'minmax':
+        # Min-max normalization for weights
+        weight_min_val = min(weights)
+        weight_max_val = max(weights)
+        weights = [(x - weight_min_val) / (weight_max_val - weight_min_val) for x in weights]
+        loss_min=min(client_loss_list)
+        loss_max=max(client_loss_list)
+        client_loss_list=[(x - loss_min) / (loss_max - loss_min) for x in client_loss_list]
+
         
+    elif normalize=='z_score':
+        # Z-score normalization for weights
+        mean_val = statistics.mean(weights)
+        std_val = statistics.stdev(weights)
+        weights = [(x - mean_val) / (std_val+epsilon) for x in weights]
+        # Z-score normalization for client losses
+        loss_mean_val = statistics.mean(client_loss_list)
+        loss_std_val = statistics.stdev(client_loss_list)
+        client_loss_list = [(x - loss_mean_val) / loss_std_val for x in client_loss_list]
+
+    # Compute final weights using softmax 
+    if soft_max==1:
+        client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
+        inv_loss = 1.0 / (client_loss_list + epsilon) 
+        
+        weights_tensor = torch.tensor(weights, dtype=torch.float32)
+        
+        final_weights = alpha * weights_tensor + (1.0 - alpha) * inv_loss
+        final_weights = F.softmax(torch.tensor(final_weights, dtype=torch.float32), dim=0)
+        
+        
+    else:
+        client_loss_list = torch.tensor(client_loss_list, dtype=torch.float32)
+        inv_loss = 1.0 / (client_loss_list + epsilon) 
+        
+        weights_tensor = torch.tensor(weights, dtype=torch.float32)
+        final_weights = alpha * weights_tensor + (1.0 - alpha) * inv_loss
+        
+
+    total_weight = final_weights.sum()
+    # Weighted aggregation of model parameters from all clients
+    for key in global_state_dict.keys():
+        # Stack and weigh updates
+        weighted_updates = torch.stack(
+            [client_models[i].state_dict()[key].float() * final_weights[i] for i in range(num_clients)],
+            dim=0
+        )
+        # Aggregate weighted updates
+        global_state_dict[key] = weighted_updates.sum(dim=0) / total_weight
+
+        
+    # Load updated parameters into global model
+    global_model.load_state_dict(global_state_dict)
+
+    return global_model
+    
         
                 
 
 
-def get_best_global_accuracy(save_dir):
-    best_accuracy = 0.0
-    best_round = -1
-    best_model_file = None
-    
-   
-    accuracy_pattern = re.compile(r"global_round_(\d+)_test_accuracy_(\d+\.\d+)\.pt")
-
-    for filename in os.listdir(save_dir):
-        match = accuracy_pattern.match(filename)
-        if match:
-            round_num = int(match.group(1))
-            accuracy = float(match.group(2))
-            if accuracy > best_accuracy:
-                best_accuracy = accuracy
-                best_round = round_num
-                best_model_file = filename
-
-    return best_accuracy, best_round, best_model_file
-    
    
 def federated_learning(global_model, num_clients, num_epochs_per_round, round_num,start_epoch):
-   
-    best_accuracy, best_round, best_model_file = get_best_global_accuracy(save_dir)
-    
+    """
+    Performs federated learning across multiple clients for a specified number of communication rounds.
+
+    Args:
+        global_model (nn.Module): The initial global model to be distributed and aggregated.
+        num_clients (int): Number of clients participating in federated learning.
+        num_epochs_per_round (int): Number of local training epochs per round.
+        round_num (int): Total number of federated learning rounds.
+        start_epoch (int): Starting round (used for resuming training).
+
+    Returns:
+        global_model (nn.Module): The updated global model after all communication rounds.
+    """   
     for round_value in range(start_epoch,round_num):
         print(f"Round {round_value + 1}/{round_num}")
 
@@ -511,56 +471,48 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
             
             # Retrieve the dataloaders for the current client
             train_dataloader = train_dataloaders[client_idx]
-            #val_dataloader = val_dataloaders[client_idx]
-                                            
+        
+        
             # Train the local model     
             trained_model,client_loss = train_local_model(client_model, train_dataloader, optimizer, criterion , client_idx,round_value ,num_epochs_per_round)
             client_models.append(trained_model)
             client_loss_list.append(client_loss)
             
-            
-        if Weighted==0:
-            # Aggregate models using FedAvg
-            global_model = federated_averaging(global_model, client_models)
-     
-            
-        elif Weighted==1:# with loss
-            if dataset_type=='VQA_v1':
-                if num_clients==2:
-                    answer_hetero=[1,1.42]
-                elif num_clients==3:
-                    answer_hetero=[1,1,1.64]
-                elif num_clients==4:
-                    answer_hetero=[1,1,1,1.85]
-                elif num_clients==5:
-                    answer_hetero=[1,1,1,1,2.06]
-            elif dataset_type=='VQA_v2':
-                 
-                if num_clients==2:
-                    answer_hetero=[1.42 ,2.56]
-                elif num_clients==3:
-                    answer_hetero=[1.13, 2.0, 2.84]
-                elif num_clients==4:
-                    answer_hetero=[ 1.0, 1.83, 2.0, 3.12]
-                elif num_clients==5:
-                    answer_hetero=[ 1.0, 1.54 ,2.0, 2.0, 3.4]
-                elif num_clients==10:
-                    answer_hetero=[1,	1	,1.09,	2,	2	,2,	2	,2,	2	,4.81]
-                elif num_clients==15:
-                    answer_hetero=[1	,1	,1	,1	,1	,2	,2	,2	,2	,2	,2	,2	,2,	2	,6.21]
-                elif num_clients==20:
-                    answer_hetero=[1	,1	,1,	1	,1	,1.17,	2,	2	,2	,2,	2,	2	,2,	2,	2	,2	,2,	2,	2.32	,7.3]
-
-
-            elif dataset_type=='VQA_v2_random':
-                if num_clients==5:
-                    answer_hetero=[1.29,1.29,1.29,1.29,1.29]
-                
-                
-                    
-           
-            global_model=federated_averaging(global_model,client_models,answer_hetero,client_loss_list)
         
+        if dataset_type=='VQA_v1':
+            if num_clients==2:
+                answer_hetero=[1,1.42]
+            elif num_clients==3:
+                answer_hetero=[1,1,1.64]
+            elif num_clients==4:
+                answer_hetero=[1,1,1,1.85]
+            elif num_clients==5:
+                answer_hetero=[1,1,1,1,2.06]
+        elif dataset_type=='VQA_v2':
+             
+            if num_clients==2:
+                answer_hetero=[1.42 ,2.56]
+            elif num_clients==3:
+                answer_hetero=[1.13, 2.0, 2.84]
+            elif num_clients==4:
+                answer_hetero=[ 1.0, 1.83, 2.0, 3.12]
+            elif num_clients==5:
+                answer_hetero=[ 1.0, 1.54 ,2.0, 2.0, 3.4]
+            elif num_clients==10:
+                answer_hetero=[1, 1, 1.09, 2, 2, 2, 2, 2, 2, 4.81]
+            elif num_clients==15:
+                answer_hetero=[1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6.21]
+            elif num_clients==20:
+                answer_hetero=[1, 1, 1, 1, 1, 1.17, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2.32, 7.3]
+
+
+        elif dataset_type=='VQA_v2_random':
+            if num_clients==5:
+                answer_hetero=[1.29,1.29,1.29,1.29,1.29]
+            
+            
+        global_model=fedex(global_model,client_models,answer_hetero,client_loss_list)
+    
         
         # Evaluate the global model
         test_accuracy = evaluate_global_model(global_model, test_dataloader, x_test, y_test, labelencoder, round_value+1)
@@ -576,6 +528,19 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
 
 
 def calculate_accuracy(predictions, x_test, y_test):
+    """
+    Calculates accuracy for VQA-style tasks.
+    An answer is considered fully correct if it matches at least 3 human-labeled answers.
+    
+    Args:
+        predictions (list): List of predicted class indices.
+        x_test (DataFrame): Test features including human-annotated answers.
+        y_test (list or array): Ground truth labels.
+    
+    Returns:
+        float: Final test accuracy in percentage.
+    """
+
     acc_val_lst = []
 
     for i, pred in enumerate(predictions):
@@ -604,13 +569,13 @@ def calculate_accuracy(predictions, x_test, y_test):
     print('test_accuracy', test_accuracy)
     return test_accuracy
     
+
+
 def save_metrics(client_idx, round_value, train_loss, train_acc, test_acc, duration, global_model=False):
     # Set the directory and file name based on whether it's a client or global model
     if global_model:
-
         file_name = 'global_model_metrics.csv'
     else:
-
         file_name = f'client_{client_idx}_metrics.csv'
 
     metrics_file = os.path.join(save_dir, file_name)
@@ -620,7 +585,6 @@ def save_metrics(client_idx, round_value, train_loss, train_acc, test_acc, durat
     
     with open(metrics_file, mode='a', newline='') as file:
         writer = csv.writer(file)
-        
         
         if not file_exists:
             if global_model:
@@ -640,49 +604,7 @@ def save_metrics(client_idx, round_value, train_loss, train_acc, test_acc, durat
             
             
             
-            
-
-
-def evaluate_val(model, dataloader, x_data, y_data, labelencoder):
-    model.eval()
-    total_loss = 0.0
-    correct_preds = 0
-    total_samples = 0
-
-    all_predictions = []
-    all_labels = []
-
-    criterion = nn.CrossEntropyLoss()
-
-    with torch.no_grad():
-        for batch in dataloader:
-            images = batch['image'].to(device)
-            texts = {k: v.to(device) for k, v in batch['text'].items()}
-            labels = batch['label'].to(device).squeeze()
-            if labels.dim()==0:
-                labels=labels.unsqueeze(0) 
-            outputs = model(images, texts)
-            loss = criterion(outputs, labels)
-
-            total_loss += loss.item() * labels.size(0)
-            _, predicted = torch.max(outputs, 1)
-            correct_preds += (predicted == labels).sum().item()
-            total_samples += labels.size(0)
-
-            all_predictions.append(predicted.cpu().numpy())
-            all_labels.append(labels.cpu().numpy())
-
-    avg_loss = total_loss / total_samples
-
-    all_predictions = np.concatenate(all_predictions)
-    all_labels = np.concatenate(all_labels)
-
-    # Calculate accuracy using the labels and predictions
-    accuracy = calculate_accuracy(all_predictions, x_data, y_data)
-
-    return avg_loss, accuracy
-
-
+        
 
 def evaluate_test(model, dataloader, x_test, y_test, labelencoder):
     model.eval()
@@ -730,5 +652,5 @@ global_model = ViTBertConcatTransformer()
 global_model = global_model.to(device)
 
 
-  
+
 global_model = federated_learning(global_model, num_clients, num_epochs_per_round, round_num,start_epoch)
