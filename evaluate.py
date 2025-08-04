@@ -18,9 +18,10 @@ labelencoder = LabelEncoder()
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-bert_size=128
 
 model_method='vit_bert_all_concat_bert_transformer'
+folder ='WeightedVQA_v1FEDUlen_clientall15_vit_bert_all_concat_bert_transformerepcoh_50soft_max'     #saved name of model
+bert_size=128
 
 
 if 'swin' in model_method:
@@ -36,7 +37,6 @@ else:
     title_mid='all'
    
 
-folder ='WeightedVQA_v1FEDUlen_clientall15_vit_bert_all_concat_bert_transformerepcoh_50soft_max'     #saved name of model
 
 csv_folder=f'Datasets/{dataset_type}/'
 
