@@ -12,25 +12,25 @@ import os
 from transformers import ViTModel, ViTFeatureExtractor
 from torchvision import transforms, models
 import time
+from transformers import AutoImageProcessor
+from transformers import SwinModel,T5Model
+
 
 labelencoder = LabelEncoder()
 
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-
+# Define model architecture type and folder to load the saved model
 model_method='vit_bert_all_concat_bert_transformer'
 folder ='WeightedVQA_v1FEDUlen_clientall15_vit_bert_all_concat_bert_transformerepcoh_50soft_max'     #saved name of model
 bert_size=128
 
 
-if 'swin' in model_method:
-    from transformers import AutoImageProcessor
-    from transformers import SwinModel,T5Model
-    print('swin')
     
-dataset_type='VQA_v1'    #VQA_v1 /VQA_v2
+dataset_type='VQA_v1'    # Options: 'VQA_v1', 'VQA_v2'
 
+# Determine the data split type for naming/logging purposes
 if  'random' in dataset_type:
     title_mid='random'
 else:
@@ -38,15 +38,19 @@ else:
    
 
 
-csv_folder=f'Datasets/{dataset_type}/'
 
+csv_folder=f'Datasets/{dataset_type}/'
+# Load training data to fit label encoder
 labelencoder_df=pd.read_csv(csv_folder+f"Train_{dataset_type}_preprocessed.csv")
 labelencoder.fit(labelencoder_df['answer_preprocessed'])
-num_classes = len(labelencoder_df['answer_preprocessed'].unique())
 
+# Get number of classes (unique answers in training data)
+num_classes = len(labelencoder_df['answer_preprocessed'].unique())
+# Load test data
 
 x_test=pd.read_csv(csv_folder+f"/X_Val_{dataset_type}_preprocessed.csv")
 
+# Encode test labels using the same label encoder
 x_test['answer_labelencoded']=labelencoder.transform(x_test['answer_preprocessed'])
 y_test=x_test['answer_labelencoded']
 
@@ -233,7 +237,18 @@ elif model_method=='swinB_bert_all_concat_bert_transformer':
 from PIL import Image          
 
 def calculate_accuracy(predictions, x_test, y_test):
-  
+    """
+    Calculates accuracy for VQA-style tasks.
+    An answer is considered fully correct if it matches at least 3 human-labeled answers.
+    
+    Args:
+        predictions (list): List of predicted class indices.
+        x_test (DataFrame): Test features including human-annotated answers.
+        y_test (list or array): Ground truth labels.
+    
+    Returns:
+        float: Final test accuracy in percentage.
+    """  
     predicted_classes = labelencoder.inverse_transform(predictions)
 
     acc_val_lst = []
@@ -278,18 +293,14 @@ class CustomDataset(Dataset):
         if dataset_type=='textvqa':
             image_id = self.x_data.iloc[idx]['image_id']
             new_image_id = f"textvqa_train_images/{image_id}.jpg"
-
-          
             image_id = self.x_data.at[idx, 'image_id'] = new_image_id
-            #print('image_id',image_id)
 
         else:
-        
             image_id = self.x_data.iloc[idx]['image_id']
+            
+            
         answers = self.x_data.iloc[idx]['answer_list_preprocessed']
         image_path = os.path.join(image_id)
-        #image_path = os.path.join(base_path, image_id)
-        
         image = Image.open(image_path).convert('RGB')
         
       
@@ -301,7 +312,6 @@ class CustomDataset(Dataset):
         
         text = self.x_data.iloc[idx]['question_preprocessed']
         text_inputs = self.tokenizer(text, return_tensors="pt", padding='max_length', truncation=True, max_length=128)
-        #print('text',text)
        
         text_inputs = {k: v.squeeze(0) for k, v in text_inputs.items()}
         
@@ -313,13 +323,24 @@ class CustomDataset(Dataset):
 
     
 def accuracy_measure_fed(model,all_predictions,client_index_model):
+    """
+    Evaluates a given model on the global test set, logs batch-wise inference time,
+    and writes final accuracy to a text file.
+    
+    Args:
+        model (nn.Module): The trained model to evaluate.
+        all_predictions (list): A list to accumulate predictions across batches.
+        client_index_model (str): Identifier for the current model/client (used in logs).
+    
+    Returns:
+        float: The calculated accuracy of the model on the test set.
+    """
 
-    print('all_predictionstesttest',len(all_predictions))
+
     with torch.no_grad(): 
         for idx,batch in enumerate(test_dataloader):
             start_time = time.time() 
-            print('batch',idx , '/',len(test_dataloader))
-    
+        
             images = batch['image'].to(device)
             texts = {k: v.to(device) for k, v in batch['text'].items()}
         
@@ -345,8 +366,7 @@ def accuracy_measure_fed(model,all_predictions,client_index_model):
                 
             
             
-                
-    
+# Create test dataset and dataloader for evaluation            
 test_dataset = CustomDataset(x_test, y_test, bert_tokenizer, vit_feature_extractor, transform=transform)
 test_dataloader = DataLoader(test_dataset, batch_size=128, shuffle=False,num_workers=4, pin_memory=True)
 
@@ -354,15 +374,12 @@ test_dataloader = DataLoader(test_dataset, batch_size=128, shuffle=False,num_wor
 model_files = [f for f in os.listdir(folder) if f.endswith('.pt')]
 model_name = [os.path.join(folder, f) for f in model_files]
 
+# Iterate over each saved client model file
 for index,client_index_model in enumerate(model_name):
-
     all_predictions = []
     model = ViTBertConcatTransformer()
-    
     model.load_state_dict(torch.load(client_index_model, map_location=device))
-    
     model.to(device)
-    
     model.eval()    
     accuracy=accuracy_measure_fed(model,all_predictions,client_index_model)
    
