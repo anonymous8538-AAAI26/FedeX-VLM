@@ -578,7 +578,12 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
   
         global_model=fedex(global_model,client_models,answer_hetero,client_loss_list)
     
-        
+        global_model_filename = f"global_round{round_value}_test_accuracy_{test_accuracy:.4f}.pt"
+        global_model_path = os.path.join(save_dir, global_model_filename)
+        torch.save(global_model.state_dict(), global_model_path)
+        print(f"Saved best global model at {global_model_path}")
+
+    
         # Evaluate the global model
         test_accuracy = evaluate_global_model(global_model, test_dataloader, x_test, y_test, labelencoder, round_value+1)
         print(f"Global Model Test Accuracy: {test_accuracy:.2f}%")
