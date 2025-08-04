@@ -100,7 +100,7 @@ alpha: 0.7
 dataset: "VQA_v1"
 num_clients: 5
 normalize: "z_score"
-eval_folder: "z_score_alpha0.7_WeightedVQA_v2FEDUlen_clientall5_vit_bert_all_concat_bert_transformerepcoh_50soft_max"
+eval_folder: "saved_model/z_score_alpha0.7_WeightedVQA_v2FEDUlen_clientall5_vit_bert_all_concat_bert_transformerepcoh_50soft_max"
 ...
 ```
 
