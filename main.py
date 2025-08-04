@@ -62,12 +62,6 @@ num_epochs_per_round = 1
 start_epoch=0
 soft_max=1
 
-# Determine data splitting method
-if 'random' in dataset_type:
-    datasplit_type='random'
-else:
-    datasplit_type='all'
-
 # Set path to dataset CSVs
 csv_folder=f'DATASETs/{dataset_type}/'
 # If softmax is used, add tag for naming
@@ -75,7 +69,7 @@ if soft_max==1:
     soft_max_title='soft_max'
 
 
-save_dir =f"saved_model/{normalize}_alpha{alpha}_Weighted{dataset_type}FED{datasplit_type}{num_clients}{model_method}epcoh_{round_num}{soft_max_title}"
+save_dir =f"saved_model/{normalize}_alpha{alpha}_Weighted{dataset_type}FEDall{num_clients}{model_method}epcoh_{round_num}{soft_max_title}"
     
       
 
@@ -106,26 +100,15 @@ def load_and_split_data(num_clients):
     x_train_clients, y_train_clients = [], []
     
 
-    if 'all' in datasplit_type:
-        for i in range(num_clients):
+    for i in range(num_clients):
 
-            x_train = pd.read_csv(f"{csv_folder}/{num_clients}clients/X_{i+1}.csv")
-            x_train['answer_labelencoded']=labelencoder.transform(x_train['answer_preprocessed'])
-            y_train=x_train['answer_labelencoded']
-        
-          
-            
-            x_train_clients.append(x_train)
-            y_train_clients.append(y_train)
-    
-    elif 'random' in datasplit_type:
-        for i in range(num_clients):
-            
-            x_train=pd.read_csv(f"{csv_folder}/{num_clients}clients/X_train_index{i+1}.csv")
-            x_train['answer_labelencoded']=labelencoder.transform(x_train['answer_preprocessed'])
-            y_train=x_train['answer_labelencoded']
-            x_train_clients.append(x_train)
-            y_train_clients.append(y_train)
+        x_train = pd.read_csv(f"{csv_folder}/{num_clients}clients/X_client{i+1}.csv")
+        x_train['answer_labelencoded']=labelencoder.transform(x_train['answer_preprocessed'])
+        y_train=x_train['answer_labelencoded']
+
+        x_train_clients.append(x_train)
+        y_train_clients.append(y_train)
+
 
 
     return x_train_clients, y_train_clients
@@ -592,11 +575,7 @@ def federated_learning(global_model, num_clients, num_epochs_per_round, round_nu
                 answer_hetero=[1, 1, 1, 1, 1, 1.17, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2.32, 7.3]
 
 
-        elif dataset_type=='VQA_v2_random':
-            if num_clients==5:
-                answer_hetero=[1.29,1.29,1.29,1.29,1.29]
-            
-            
+  
         global_model=fedex(global_model,client_models,answer_hetero,client_loss_list)
     
         
