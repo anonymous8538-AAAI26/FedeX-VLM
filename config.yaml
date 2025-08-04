@@ -6,3 +6,4 @@ alpha: 0.7
 dataset: "VQA_v1"
 num_clients: 5
 normalize: "z_score"
+eval_folder: "WeightedVQA_v1FEDUlen_clientall15_vit_bert_all_concat_bert_transformerepcoh_50soft_max"
