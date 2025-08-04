@@ -53,11 +53,9 @@ model_method='vit_bert_all_concat_bert_transformer'
 
 # Example usage
 num_epochs_per_round = 1
-
 start_epoch=0
-
-Weighted =2
-soft_max=0
+Weighted =1
+soft_max=1
 
 if 'random' in dataset_type:
     datasplit_type='random'
@@ -69,8 +67,6 @@ csv_folder=f'DATASETs/{dataset_type}/'
 
 if soft_max==1:
     soft_max_title='soft_max'
-
-
 
 if Weighted==0:
     save_dir =f'saved_model/fedavg{dataset_type}FED{datasplit_type}{num_clients}_{model_method}epcoh_{round_num}'
@@ -388,19 +384,6 @@ def train_local_model(model, dataloader, optimizer, criterion, client_idx,round_
     return model,avg_loss
 
 
-def _manage_saved_models_after_global(save_dir, best_round):
-    # List all files in the directory
-    for filename in os.listdir(save_dir):
-        file_path = os.path.join(save_dir, filename)
-
-        # Check if the file has a .pt extension
-        if filename.endswith(".pt"):
-            # Check if the file contains the best_round string
-            if f"round_{best_round}_" not in filename:
-                # If not, delete the file
-                os.remove(file_path)
-                print(f"Deleted file: {file_path}")                    
-                           
                            
 if Weighted==0:                                          
     def federated_averaging(global_model, client_models):
