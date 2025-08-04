@@ -116,5 +116,5 @@ To evaluate the trained model:
 ```python
 python evaluate.py --config config.yaml
 ```
-Make sure to set the 'eval_folder' parameter in your config.yaml file to the directory containing the test data you want to evaluate on.
+Make sure to set the 'eval_folder' parameter in your config.yaml file to the directory containing the the model you want to evaluate on.
 
